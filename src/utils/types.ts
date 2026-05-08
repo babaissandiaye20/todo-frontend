@@ -21,6 +21,14 @@ export interface CreateTodoInput {
   dueDate?: string;
 }
 
+export interface UpdateTodoInput {
+  title?: string;
+  description?: string;
+  completed?: boolean;
+  priority?: Priority;
+  dueDate?: string;
+}
+
 export interface ListTodosFilters {
   completed?: boolean;
   priority?: Priority;

@@ -18,6 +18,8 @@ export function TodoList({ refreshKey = 0 }: Props) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // IDs of todos currently being toggled — disables their checkbox to prevent double-clicks.
+  const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
@@ -35,6 +37,22 @@ export function TodoList({ refreshKey = 0 }: Props) {
   useEffect(() => {
     void fetchTodos();
   }, [fetchTodos, refreshKey]);
+
+  async function handleToggleComplete(todo: Todo) {
+    setPendingIds((prev) => new Set(prev).add(todo.id));
+    try {
+      const updated = await todosService.update(todo.id, { completed: !todo.completed });
+      setTodos((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update todo');
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(todo.id);
+        return next;
+      });
+    }
+  }
 
   if (loading) {
     return <p className="py-6 text-sm text-gray-500">Loading todos...</p>;
@@ -63,15 +81,24 @@ export function TodoList({ refreshKey = 0 }: Props) {
     <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
       {todos.map((todo) => (
         <li key={todo.id} className="px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <input
+              id={`todo-${todo.id}-completed`}
+              type="checkbox"
+              checked={todo.completed}
+              disabled={pendingIds.has(todo.id)}
+              onChange={() => void handleToggleComplete(todo)}
+              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-wait disabled:opacity-50"
+            />
             <div className="min-w-0 flex-1">
-              <p
-                className={`truncate text-sm font-medium ${
+              <label
+                htmlFor={`todo-${todo.id}-completed`}
+                className={`block cursor-pointer truncate text-sm font-medium ${
                   todo.completed ? 'text-gray-400 line-through' : 'text-gray-900'
                 }`}
               >
                 #{todo.id} &middot; {todo.title}
-              </p>
+              </label>
               {todo.description && (
                 <p className="mt-1 text-xs text-gray-500 line-clamp-2">{todo.description}</p>
               )}
