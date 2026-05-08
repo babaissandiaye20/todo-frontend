@@ -54,6 +54,24 @@ export function TodoList({ refreshKey = 0 }: Props) {
     }
   }
 
+  async function handleDelete(todo: Todo) {
+    if (!window.confirm(`Delete todo "${todo.title}" ?`)) return;
+
+    setPendingIds((prev) => new Set(prev).add(todo.id));
+    try {
+      await todosService.remove(todo.id);
+      setTodos((prev) => prev.filter((t) => t.id !== todo.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete todo');
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(todo.id);
+        return next;
+      });
+    }
+    // On success, the item is removed from the list — no need to clean pendingIds for that id.
+  }
+
   if (loading) {
     return <p className="py-6 text-sm text-gray-500">Loading todos...</p>;
   }
@@ -114,6 +132,27 @@ export function TodoList({ refreshKey = 0 }: Props) {
             >
               {todo.priority}
             </span>
+            <button
+              type="button"
+              aria-label={`Delete todo ${todo.id}`}
+              disabled={pendingIds.has(todo.id)}
+              onClick={() => void handleDelete(todo)}
+              className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-wait disabled:opacity-50"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
           </div>
         </li>
       ))}
