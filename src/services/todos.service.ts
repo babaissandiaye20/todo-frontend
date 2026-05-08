@@ -9,6 +9,10 @@ export const todosService = {
   },
 
   list(filters: ListTodosFilters = {}): Promise<Todo[]> {
-    return http.get<Todo[]>('/todos', { query: filters });
+    // Cast bridges the structural gap: a closed interface has no index signature,
+    // even when all its values match Record<string, QueryValue>.
+    return http.get<Todo[]>('/todos', {
+      query: filters as Record<string, string | number | boolean | undefined>,
+    });
   },
 };
