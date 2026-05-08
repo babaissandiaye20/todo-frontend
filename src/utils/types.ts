@@ -20,3 +20,8 @@ export interface CreateTodoInput {
   priority?: Priority;
   dueDate?: string;
 }
+
+export interface ListTodosFilters {
+  completed?: boolean;
+  priority?: Priority;
+}

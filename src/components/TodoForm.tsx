@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { todosService } from '@/services/todos.service';
-import type { Priority } from '@/utils/types';
+import type { Priority, Todo } from '@/utils/types';
 
 const PRIORITIES: Priority[] = ['LOW', 'MEDIUM', 'HIGH'];
 
@@ -12,7 +12,11 @@ type Status =
   | { kind: 'success'; id: number }
   | { kind: 'error'; message: string };
 
-export function TodoForm() {
+interface Props {
+  onCreated?: (todo: Todo) => void;
+}
+
+export function TodoForm({ onCreated }: Props = {}) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
@@ -36,6 +40,7 @@ export function TodoForm() {
       setDescription('');
       setPriority('MEDIUM');
       setDueDate('');
+      onCreated?.(created);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       setStatus({ kind: 'error', message });
