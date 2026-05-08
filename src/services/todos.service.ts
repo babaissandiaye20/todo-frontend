@@ -24,4 +24,8 @@ export const todosService = {
   update(id: number, input: UpdateTodoInput): Promise<Todo> {
     return http.patch<Todo>(`/todos/${id}`, input);
   },
+
+  remove(id: number): Promise<void> {
+    return http.delete<void>(`/todos/${id}`);
+  },
 };
