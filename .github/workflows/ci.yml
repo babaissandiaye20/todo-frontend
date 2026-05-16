@@ -10,6 +10,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Compute image tag (trim whitespace from username secret)
+        id: img
+        env:
+          REG_USER: ${{ secrets.DOCKERUSERNAME }}
+        run: |
+          user="$(printf %s "$REG_USER" | tr -d '[:space:]')"
+          echo "tag=${user}/todo_front:latest" >> "$GITHUB_OUTPUT"
+
       - uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERUSERNAME }}
@@ -19,4 +27,4 @@ jobs:
         with:
           context: ./todo-frontend
           push: true
-          tags: ${{ secrets.DOCKERUSERNAME }}/${{ secrets.REPOFRONTEND }}:latest
+          tags: ${{ steps.img.outputs.tag }}
