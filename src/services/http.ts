@@ -2,7 +2,11 @@
 // Reads the API base URL from env so the frontend works both in dev (localhost:4000)
 // and inside Docker (where it should call http://backend:4000 from server components).
 
-const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// En prod, si NEXT_PUBLIC_API_URL n'est pas defini, le navigateur appelle l'API
+// sur le MEME domaine via /api (Nginx sur le Front route /api vers le Back).
+const PUBLIC_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:4000');
 const INTERNAL_API_URL = process.env.API_URL_INTERNAL ?? PUBLIC_API_URL;
 
 // Server components run inside the container -> use the internal Docker network hostname.
