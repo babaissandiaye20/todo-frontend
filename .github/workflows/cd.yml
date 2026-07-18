@@ -32,7 +32,7 @@ jobs:
 
       - name: Deployer le FRONT (conteneur Next.js) + rollback
         env:
-          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_USER: ${{ secrets.SSH_USER || 'ubuntu' }}
           FRONT_IP: ${{ secrets.FRONT_IP }}
           IMAGE: ${{ steps.img.outputs.image }}
         run: |
