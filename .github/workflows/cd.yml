@@ -1,0 +1,62 @@
+name: frontend-cd
+
+# Se declenche APRES le CI (build+push), ou manuellement.
+on:
+  workflow_run:
+    workflows: ["frontend-ci"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculer le tag de l'image
+        id: img
+        env:
+          REG_USER: ${{ secrets.DOCKERUSERNAME }}
+        run: |
+          user="$(printf %s "$REG_USER" | tr -d '[:space:]')"
+          echo "image=${user}/todo_front:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Preparer la cle SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          FRONT_IP: ${{ secrets.FRONT_IP }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan "$FRONT_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deployer le FRONT (conteneur Next.js) + rollback
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          FRONT_IP: ${{ secrets.FRONT_IP }}
+          IMAGE: ${{ steps.img.outputs.image }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "${SSH_USER}@${FRONT_IP}" \
+            "IMAGE='${IMAGE}' bash -s" <<'DEPLOY'
+          set -e
+          NAME=todo-frontend
+          OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' "$NAME" 2>/dev/null || echo "")
+
+          docker pull "$IMAGE"
+          docker rm -f "$NAME" 2>/dev/null || true      # gere le 1er deploiement
+          docker run -d --name "$NAME" --restart unless-stopped -p 3000:3000 "$IMAGE"
+
+          # Health check (24 x 5s)
+          for i in $(seq 1 24); do
+            if curl -s http://localhost:3000 >/dev/null 2>&1; then echo "Frontend UP"; exit 0; fi
+            sleep 5
+          done
+
+          echo "Health check KO -> ROLLBACK vers ${OLD_IMAGE:-aucune}"
+          docker rm -f "$NAME" 2>/dev/null || true
+          if [ -n "$OLD_IMAGE" ]; then
+            docker run -d --name "$NAME" --restart unless-stopped -p 3000:3000 "$OLD_IMAGE"
+          fi
+          exit 1
+          DEPLOY
